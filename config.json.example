@@ -1,0 +1,53 @@
+{
+  "patterns": [
+    {
+      "name": "Timestamp",
+      "regex": "\\d{4}-\\d{2}-\\d{2}[ T]\\d{2}:\\d{2}:\\d{2}",
+      "replacement": "<TIMESTAMP>",
+      "hash": false
+    },
+    {
+      "name": "CompanyName",
+      "regex": "(?:<DOMAIN>|<DOMAIN>|<DOMAIN>|<DOMAIN>|<DOMAIN>|<DOMAIN>|<DOMAIN>|<DOMAIN>|<DOMAIN>|<DOMAIN>|<DOMAIN>)",
+      "replacement": "<DOMAIN>",
+      "hash": false,
+      "case_sensitive": false,
+      "comment": "Matches specific company domains (sanitized from original)"
+    },
+    {
+      "name": "UniqueUserID",
+      "regex": "UserID=(\\d+)",
+      "replacement": "UserID=<HASHED_ID>",
+      "hash": true
+    },
+    {
+      "name": "PhoneNumber",
+      "regex": "(?:\\+\\d{1,2}[\\s-]?)?(\\(?\\d{3}\\)?[\\s.-]?\\d{3}[\\s.-]?\\d{4})",
+      "replacement": "<PHONE>",
+      "hash": false
+    },
+    {
+      "name": "MAC Address",
+      "regex": "([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})",
+      "replacement": "<MAC>",
+      "hash": false
+    },
+    {
+      "name": "DomainUsername",
+      "regex": "(?:<DOMAIN>|<DOMAIN>|<DOMAIN>.com|<DOMAIN>.local|<DOMAIN>|<DOMAIN>|<DOMAIN>|<DOMAIN>|<DOMAIN>|<DOMAIN>|<DOMAIN>|<DOMAIN>|<DOMAIN>|<DOMAIN>|<DOMAIN>)\\\\[A-Za-z0-9._-]+",
+      "replacement": "<DOMAIN\\USERNAME>",
+      "hash": false,
+      "case_sensitive": false,
+      "comment": "Matches usernames with specific domains (sanitized from original)"
+    },
+    {
+      "name": "mailNickname",
+      "regex": "(?i)mailNickname\\s*[:=]\\s*([^,\\s]+)",
+      "replacement": "mailNickname=<USERNAME>,
+      "hash": false,
+      "case_sensitive": false,
+      "comment": "Matches mailNickname attribute values"
+    }
+  ]
+}
+

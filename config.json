@@ -97,6 +97,19 @@
         "Jane Doe",
         "Robert Smith"
       ]
+    },
+    {
+      "name": "NetBIOSName",
+      "regex": "\\b[A-Za-z0-9-]{1,15}\\b",
+      "replacement": "<NETBIOS>",
+      "hash": false,
+      "case_sensitive": false,
+      "comment": "Matches NetBIOS names (up to 15 chars, letters, numbers, hyphens)",
+      "examples": [
+        "WORKSTATION1",
+        "SERVER-A",
+        "FILESRV"
+      ]
     }
   ]
 }

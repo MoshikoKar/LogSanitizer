@@ -110,6 +110,19 @@
         "SERVER-A",
         "FILESRV"
       ]
+    },
+    {
+      "name": "NetBIOSDomainUsername",
+      "regex": "exam_ple\\\\[A-Za-z0-9._-]+",
+      "replacement": "<NETBIOS_DOMAIN\\USERNAME>",
+      "hash": false,
+      "case_sensitive": false,
+      "comment": "Matches NetBIOS domain\\username format - replace 'exam_ple' with your actual domain name",
+      "examples": [
+        "exam_ple\\user1",
+        "exam_ple\\john.doe",
+        "exam_ple\\admin_user"
+      ]
     }
   ]
 }

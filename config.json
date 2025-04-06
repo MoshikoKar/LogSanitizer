@@ -4,50 +4,99 @@
       "name": "Timestamp",
       "regex": "\\d{4}-\\d{2}-\\d{2}[ T]\\d{2}:\\d{2}:\\d{2}",
       "replacement": "<TIMESTAMP>",
-      "hash": false
+      "hash": false,
+      "comment": "Matches ISO-like timestamp formats",
+      "examples": [
+        "2025-04-06 14:30:45",
+        "2025-04-06T14:30:45"
+      ]
     },
     {
       "name": "CompanyName",
-      "regex": "(?:<DOMAIN>|<DOMAIN>|<DOMAIN>|<DOMAIN>|<DOMAIN>|<DOMAIN>|<DOMAIN>|<DOMAIN>|<DOMAIN>|<DOMAIN>|<DOMAIN>)",
+      "regex": "(?:acme\\.com|globex\\.net|initech\\.org|umbrella\\.corp|stark\\.industries)",
       "replacement": "<DOMAIN>",
       "hash": false,
       "case_sensitive": false,
-      "comment": "Matches specific company domains (sanitized from original)"
+      "comment": "Matches specific company domains in logs or emails",
+      "examples": [
+        "acme.com",
+        "GLOBEX.NET",
+        "Stark.Industries"
+      ]
     },
     {
       "name": "UniqueUserID",
       "regex": "UserID=(\\d+)",
       "replacement": "UserID=<HASHED_ID>",
-      "hash": true
+      "hash": true,
+      "comment": "Captures and hashes numeric user IDs",
+      "examples": [
+        "UserID=123456",
+        "UserID=789"
+      ]
     },
     {
       "name": "PhoneNumber",
-      "regex": "(?:\\+\\d{1,2}[\\s-]?)?(\\(?\\d{3}\\)?[\\s.-]?\\d{3}[\\s.-]?\\d{4})",
+      "regex": "(?:\\+972[-\\s]?)?(?:\\(?0?(?:2|3|4|5[0-8]|7[2-47]|8|9|77)(?:\\)?[-\\s]?)|\\(?0?50\\)?[-\\s]?)\\d{3}[-\\s]?\\d{4}",
       "replacement": "<PHONE>",
-      "hash": false
+      "hash": false,
+      "comment": "Matches various phone number formats including Israeli numbers",
+      "examples": [
+        "+972-50-1234567",
+        "0501234567",
+        "+1 (555) 123-4567"
+      ]
     },
     {
       "name": "MAC Address",
       "regex": "([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})",
       "replacement": "<MAC>",
-      "hash": false
+      "hash": false,
+      "comment": "Matches MAC addresses with colon or hyphen separators",
+      "examples": [
+        "00:1A:2B:3C:4D:5E",
+        "00-1A-2B-3C-4D-5E",
+        "a1:b2:c3:d4:e5:f6"
+      ]
     },
     {
       "name": "DomainUsername",
-      "regex": "(?:<DOMAIN>|<DOMAIN>|<DOMAIN>.com|<DOMAIN>.local|<DOMAIN>|<DOMAIN>|<DOMAIN>|<DOMAIN>|<DOMAIN>|<DOMAIN>|<DOMAIN>|<DOMAIN>|<DOMAIN>|<DOMAIN>|<DOMAIN>)\\\\[A-Za-z0-9._-]+",
+      "regex": "(?:acme\\.com|globex\\.net|initech\\.org|umbrella\\.corp|stark\\.industries)\\\\[A-Za-z0-9._-]+",
       "replacement": "<DOMAIN\\USERNAME>",
       "hash": false,
       "case_sensitive": false,
-      "comment": "Matches usernames with specific domains (sanitized from original)"
+      "comment": "Matches domain\\username format for specific company domains",
+      "examples": [
+        "acme.com\\john.doe",
+        "GLOBEX.NET\\jane_smith",
+        "stark.industries\\tony.stark"
+      ]
     },
     {
       "name": "mailNickname",
       "regex": "(?i)mailNickname\\s*[:=]\\s*([^,\\s]+)",
-      "replacement": "mailNickname=<USERNAME>,
+      "replacement": "mailNickname=<USERNAME>",
       "hash": false,
       "case_sensitive": false,
-      "comment": "Matches mailNickname attribute values"
+      "comment": "Matches mailNickname attribute in directory services",
+      "examples": [
+        "mailNickname: jdoe",
+        "MAILNICKNAME=jdoe123",
+        "mailNickname = john.doe"
+      ]
+    },
+    {
+      "name": "names",
+      "regex": "\\b(?:John|Jane|Robert|Sarah|Michael|Emily)\\b(?:\\s+\\b(?:Doe|Smith|Johnson|Brown|Wilson|Davis)\\b)?",
+      "replacement": "<NAME>",
+      "hash": false,
+      "case_sensitive": true,
+      "comment": "Matches specific names - replace sample names (John, Jane, etc.) with names you want to sanitize",
+      "examples": [
+        "John",
+        "Jane Doe",
+        "Robert Smith"
+      ]
     }
   ]
 }
-

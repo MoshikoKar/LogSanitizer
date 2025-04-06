@@ -1,45 +1,4 @@
-def process_load_file(self, file_path):
-        """Process the load file task"""
-        self.update_status(f"Loading {os.path.basename(file_path)}...")
-        self.update_progress(0)
-        
-        try:
-            # Reset current office file reference
-            self.current_office_file = None
-            
-            with open(file_path, 'r', encoding='utf-8') as file:
-                file_content = file.read()
-            
-            # Update UI
-            self.root.after(0, lambda: self.input_text.delete(1.0, tk.END))
-            self.root.after(0, lambda: self.input_text.insert(tk.END, file_content))
-            
-            self.update_status(f"Loaded: {os.path.basename(file_path)}")
-            self.update_progress(100)
-            logging.info(f"Loaded file: {file_path}")
-        except UnicodeDecodeError:
-            # Try with different encoding
-            try:
-                with open(file_path, 'r', encoding='latin-1') as file:
-                    file_content = file.read()
-                
-                # Update UI
-                self.root.after(0, lambda: self.input_text.delete(1.0, tk.END))
-                self.root.after(0, lambda: self.input_text.insert(tk.END, file_content))
-                
-                self.update_status(f"Loaded with latin-1 encoding: {os.path.basename(file_path)}")
-                self.update_progress(100)
-                logging.info(f"Loaded file with latin-1 encoding: {file_path}")
-            except Exception as e:
-                self.update_status(f"Error loading file: {e}")
-                self.update_progress(0)
-                logging.error(f"Failed to load file {file_path}: {e}")
-                self.root.after(0, lambda: messagebox.showerror("Error", f"Failed to load file: {e}"))
-        except Exception as e:
-            self.update_status(f"Error loading file: {e}")
-            self.update_progress(0)
-            logging.error(f"Failed to load file {file_path}: {e}")
-            self.root.after(0, lambda: messagebox.showerror("Error", f"Failed to load file: {e}"))
+#!/usr/bin/env python3
 import tkinter as tk
 from tkinter import filedialog, messagebox, scrolledtext, ttk
 import re
@@ -51,8 +10,10 @@ import hashlib
 import threading
 import queue
 from typing import List, Dict, Tuple, Optional, Pattern, Callable, Any, Set
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import time
+import functools
+import secrets
 
 # Set up logging with rotation
 from logging.handlers import RotatingFileHandler
@@ -70,15 +31,42 @@ logging.basicConfig(
     handlers=[log_handler]
 )
 
+# Caching decorator for pattern compilation
+def cached_regex_compile(func):
+    """Cache compiled regex patterns to improve performance"""
+    _cache = {}
+    
+    @functools.wraps(func)
+    def wrapper(pattern, flags=0):
+        # Create a unique cache key considering both pattern and flags
+        cache_key = (pattern, flags)
+        
+        if cache_key not in _cache:
+            _cache[cache_key] = func(pattern, flags)
+        
+        return _cache[cache_key]
+    
+    return wrapper
+
+# Wrap re.compile with caching
+compile_regex = cached_regex_compile(re.compile)
+
 @dataclass
 class SanitizationPattern:
-    """Data class to hold sanitization pattern details"""
+    """Enhanced data class to hold sanitization pattern details"""
     name: str
     pattern: Pattern
     replacement: str
     hash_flag: bool
     enabled: bool = True
+    case_sensitive: bool = False
+    comment: str = ""
     
+    def __post_init__(self):
+        """Validate pattern on initialization"""
+        if not self.name:
+            raise ValueError("Pattern name cannot be empty")
+        
     def apply(self, text: str) -> Tuple[str, int]:
         """Apply the pattern and return the modified text and count of replacements"""
         if not self.enabled:
@@ -91,7 +79,9 @@ class SanitizationPattern:
             def replace_match(match):
                 matched_text = match.group(0)
                 if self.hash_flag:
-                    return f"<HASHED_{self.name.upper()}_{hashlib.sha256(matched_text.encode('utf-8')).hexdigest()[:8].upper()}>"
+                    # More secure hashing with salt
+                    salt = secrets.token_hex(4)
+                    return f"<HASHED_{self.name.upper()}_{hashlib.sha256((salt + matched_text).encode('utf-8')).hexdigest()[:12].upper()}>"
                 return self.replacement if match.lastindex is None else match.expand(self.replacement)
             
             result = self.pattern.sub(replace_match, text)
@@ -101,7 +91,7 @@ class SanitizationPattern:
 
 
 class SanitizerEngine:
-    """Core sanitization engine separated from the UI"""
+    """Enhanced core sanitization engine"""
     
     def __init__(self):
         self.patterns: Dict[str, SanitizationPattern] = {}
@@ -110,7 +100,7 @@ class SanitizerEngine:
         self.initialize_default_patterns()
         
     def initialize_default_patterns(self):
-        """Set up the default sanitization patterns"""
+        """Set up the default sanitization patterns with improved error handling"""
         default_patterns = {
             "Email": (r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b", "<EMAIL>", False),
             "IP": (r"\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b", "<IP>", False),
@@ -129,41 +119,42 @@ class SanitizerEngine:
         
         try:
             for name, (pattern, replacement, hash_flag) in default_patterns.items():
-                compiled_pattern = re.compile(pattern)
-                self.patterns[name] = SanitizationPattern(name, compiled_pattern, replacement, hash_flag)
+                compiled_pattern = compile_regex(pattern)
+                self.patterns[name] = SanitizationPattern(
+                    name, 
+                    compiled_pattern, 
+                    replacement, 
+                    hash_flag
+                )
             
-            # Add system-specific patterns
-            self.patterns["Username"] = SanitizationPattern(
-                "Username", 
-                re.compile(r"\b" + re.escape(self.username) + r"\b", re.IGNORECASE),
-                "<USERNAME>",
-                False
-            )
+            # System-specific patterns with improved detection
+            system_patterns = [
+                ("Username", self.username, r"\b{}\b", "<USERNAME>"),
+                ("Hostname", self.hostname, r"\b{}\b", "<HOSTNAME>"),
+                ("FilePath_Username", self.username, r"(?<=Users\\){}", "<USERNAME>")
+            ]
             
-            self.patterns["Hostname"] = SanitizationPattern(
-                "Hostname",
-                re.compile(r"\b" + re.escape(self.hostname) + r"\b", re.IGNORECASE),
-                "<HOSTNAME>",
-                False
-            )
+            for name, value, template, replacement in system_patterns:
+                try:
+                    # Escape special regex characters in username/hostname
+                    escaped_value = re.escape(value)
+                    pattern = compile_regex(template.format(escaped_value), re.IGNORECASE)
+                    self.patterns[name] = SanitizationPattern(
+                        name, 
+                        pattern, 
+                        replacement, 
+                        False, 
+                        case_sensitive=False
+                    )
+                except Exception as e:
+                    logging.warning(f"Could not create system pattern {name}: {e}")
             
-            self.patterns["FilePath_Username"] = SanitizationPattern(
-                "FilePath_Username",
-                re.compile(r"(?<=Users\\)[^\\]+", re.IGNORECASE),
-                "<USERNAME>",
-                False
-            )
-            
-        except re.error as e:
-            logging.error(f"Failed to compile default pattern: {e}")
-            raise ValueError(f"Invalid default regex pattern: {e}")
+        except Exception as e:
+            logging.error(f"Failed to compile default patterns: {e}")
+            raise ValueError(f"Pattern initialization failed: {e}")
     
     def load_config(self, config_path: str) -> Tuple[bool, str]:
-        """Load custom patterns from a config file
-        
-        Returns:
-            Tuple[bool, str]: Success status and message
-        """
+        """Enhanced config loading with more robust validation"""
         if not os.path.exists(config_path):
             return False, f"Config file not found: {config_path}"
             
@@ -172,38 +163,39 @@ class SanitizerEngine:
                 config = json.load(file)
                 custom_patterns = config.get("patterns", [])
             
-            # Validate patterns before applying
+            # Comprehensive pattern validation
+            validated_patterns = []
             for pattern in custom_patterns:
-                if "regex" not in pattern or "replacement" not in pattern:
-                    return False, f"Missing 'regex' or 'replacement' in pattern: {pattern}"
+                # Check required fields
+                if not all(key in pattern for key in ["name", "regex", "replacement"]):
+                    logging.warning(f"Skipping invalid pattern: missing required fields {pattern}")
+                    continue
                 
                 name = pattern.get("name", "Unnamed")
-                if not name:
-                    return False, "Pattern name cannot be empty"
+                regex = pattern.get("regex")
+                replacement = pattern.get("replacement")
+                
+                # Validate regex
+                try:
+                    flags = 0 if pattern.get("case_sensitive", False) else re.IGNORECASE
+                    compiled_regex = compile_regex(regex, flags)
                     
-                try:
-                    re.compile(pattern["regex"])
+                    validated_patterns.append(SanitizationPattern(
+                        name=name,
+                        pattern=compiled_regex,
+                        replacement=replacement,
+                        hash_flag=pattern.get("hash", False),
+                        case_sensitive=pattern.get("case_sensitive", False),
+                        comment=pattern.get("comment", "")
+                    ))
                 except re.error as e:
-                    return False, f"Invalid regex pattern '{name}': {e}"
+                    logging.warning(f"Invalid regex for pattern '{name}': {e}")
             
-            # Apply valid patterns
-            for pattern in custom_patterns:
-                name = pattern.get("name", "Unnamed")
-                flags = 0 if pattern.get("case_sensitive", False) else re.IGNORECASE
-                
-                try:
-                    compiled_pattern = re.compile(pattern["regex"], flags)
-                    self.patterns[name] = SanitizationPattern(
-                        name,
-                        compiled_pattern,
-                        pattern["replacement"],
-                        pattern.get("hash", False)
-                    )
-                except re.error as e:
-                    logging.warning(f"Skipping invalid pattern '{name}': {e}")
+            # Update patterns
+            self.patterns.update({p.name: p for p in validated_patterns})
             
-            logging.info(f"Successfully loaded config: {config_path}")
-            return True, f"Loaded {len(custom_patterns)} custom patterns"
+            logging.info(f"Successfully loaded {len(validated_patterns)} custom patterns from {config_path}")
+            return True, f"Loaded {len(validated_patterns)} custom patterns"
                 
         except json.JSONDecodeError as e:
             return False, f"Invalid JSON in config file: {e}"
@@ -212,32 +204,31 @@ class SanitizerEngine:
             return False, f"Error loading config: {e}"
     
     def sanitize(self, log_text: str, callback: Optional[Callable[[str, int, int], None]] = None) -> Tuple[str, Dict[str, int]]:
-        """Sanitize the log text and return the results
-        
-        Args:
-            log_text: The text to sanitize
-            callback: Optional callback function for progress updates
-            
-        Returns:
-            Tuple[str, Dict[str, int]]: Sanitized text and a dictionary of pattern names and replacement counts
-        """
+        """Enhanced sanitization with improved performance and tracing"""
         sanitized_text = log_text
         pattern_counts = {}
         total_patterns = len(self.patterns)
         
-        for i, (name, pattern_obj) in enumerate(self.patterns.items()):
+        # Create a copy of patterns to avoid modification during iteration
+        patterns_copy = list(self.patterns.items())
+        
+        for i, (name, pattern_obj) in enumerate(patterns_copy):
             try:
                 sanitized_text, count = pattern_obj.apply(sanitized_text)
-                pattern_counts[name] = count
                 
-                if callback and i % 3 == 0:  # Update progress every few patterns
+                # Only add to counts if there were replacements
+                if count > 0:
+                    pattern_counts[name] = count
+                
+                # Optional progress callback
+                if callback and i % 3 == 0:
                     callback(sanitized_text, i + 1, total_patterns)
                     
             except Exception as e:
                 logging.error(f"Error applying pattern '{name}': {e}")
-                # Continue with other patterns rather than failing completely
         
         return sanitized_text, pattern_counts
+
 
 
 class LogSanitizerApp:

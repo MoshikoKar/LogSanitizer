@@ -37,14 +37,16 @@
     },
     {
       "name": "PhoneNumber",
-      "regex": "(?:\\+972[-\\s]?)?(?:\\(?0?(?:2|3|4|5[0-8]|7[2-47]|8|9|77)(?:\\)?[-\\s]?)|\\(?0?50\\)?[-\\s]?)\\d{3}[-\\s]?\\d{4}",
+      "regex": "\\b(?:\\+972[-.\\s]?(?:[2-9]|(?:5[02-8]|7[2-47])[0-9])[0-9]{7}|\\+40[-.\\s]?(?:7[2-8])[0-9]{7}|\\+1[-.\\s]?\\(?\\d{3}\\)?[-.\\s]?\\d{3}[-.\\s]?\\d{4})\\b",
       "replacement": "<PHONE>",
       "hash": false,
-      "comment": "Matches various phone number formats including Israeli numbers",
+      "comment": "Matches Israeli (+972), Romanian (+40), and US (+1) phone numbers with strict formatting",
       "examples": [
         "+972-50-1234567",
         "0501234567",
-        "+1 (555) 123-4567"
+        "+40 723 456 789",
+        "(555) 123-4567",
+        "+1-212-555-7890"
       ]
     },
     {

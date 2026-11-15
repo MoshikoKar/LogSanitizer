@@ -1,0 +1,101 @@
+{
+  "patterns": [
+    {
+      "name": "Timestamp",
+      "regex": "\\d{4}-\\d{2}-\\d{2}[ T]\\d{2}:\\d{2}:\\d{2}",
+      "replacement": "<TIMESTAMP>",
+      "hash": false,
+      "priority": 30,
+      "comment": "Replaces the built-in Timestamp (which only matches after 'Logged at ') with any ISO-like timestamp",
+      "examples": [
+        "2025-04-06 14:30:45",
+        "2025-04-06T14:30:45"
+      ]
+    },
+    {
+      "name": "CompanyName",
+      "regex": "(?:acme\\.com|globex\\.net|initech\\.org|umbrella\\.corp|stark\\.industries)",
+      "replacement": "<DOMAIN>",
+      "hash": false,
+      "case_sensitive": false,
+      "priority": 50,
+      "comment": "Matches specific company domains in logs or emails",
+      "examples": [
+        "acme.com",
+        "GLOBEX.NET",
+        "Stark.Industries"
+      ]
+    },
+    {
+      "name": "DomainUsername",
+      "regex": "(?:acme\\.com|globex\\.net|initech\\.org|umbrella\\.corp|stark\\.industries)\\\\[A-Za-z0-9._-]+",
+      "replacement": "<DOMAIN\\USERNAME>",
+      "hash": false,
+      "case_sensitive": false,
+      "priority": 60,
+      "comment": "Matches domain\\username for specific company domains (higher priority than CompanyName so the whole thing is replaced)",
+      "examples": [
+        "acme.com\\john.doe",
+        "GLOBEX.NET\\jane_smith"
+      ]
+    },
+    {
+      "name": "NetBIOSDomainUsername",
+      "regex": "exam_ple\\\\(?P<value>[A-Za-z0-9._-]+)",
+      "replacement": "<USERNAME>",
+      "hash": false,
+      "case_sensitive": false,
+      "priority": 60,
+      "comment": "NETBIOS\\username - replace 'exam_ple' with your domain. (?P<value>...) keeps the domain and redacts only the user",
+      "examples": [
+        "exam_ple\\user1",
+        "exam_ple\\john.doe"
+      ]
+    },
+    {
+      "name": "UniqueUserID",
+      "regex": "UserID=(?P<value>\\d+)",
+      "replacement": "<USER_ID>",
+      "hash": true,
+      "priority": 55,
+      "comment": "Hashes numeric user IDs; the same ID gets the same hash within one run, so lines can still be correlated",
+      "examples": [
+        "UserID=123456",
+        "UserID=789"
+      ]
+    },
+    {
+      "name": "PhoneNumber",
+      "regex": "(?:\\+972[-.\\s]?(?:[2-489]|[57]\\d)[-.\\s]?\\d{3}[-.\\s]?\\d{4}|\\+40[-.\\s]?(?:7[2-8])[0-9]{7}|\\+49[-.\\s]?(?:1[5-7][0-9])[0-9]{7,8}|\\+1[-.\\s]?\\(?\\d{3}\\)?[-.\\s]?\\d{3}[-.\\s]?\\d{4})\\b",
+      "replacement": "<PHONE>",
+      "hash": false,
+      "priority": 60,
+      "comment": "Israeli (+972), Romanian (+40), German (+49) and US (+1) numbers in international format",
+      "examples": [
+        "+972-501234567",
+        "+40 723456789",
+        "+49 15112345678",
+        "+1-212-555-7890"
+      ]
+    },
+    {
+      "name": "names",
+      "regex": "\\b(?:John|Jane|Robert|Sarah|Michael|Emily)\\b(?:\\s+\\b(?:Doe|Smith|Johnson|Brown|Wilson|Davis)\\b)?",
+      "replacement": "<NAME>",
+      "hash": false,
+      "case_sensitive": true,
+      "priority": 45,
+      "comment": "Specific people's names - replace the sample names with the ones you need to hide",
+      "examples": [
+        "John",
+        "Jane Doe",
+        "Robert Smith"
+      ]
+    },
+    {
+      "name": "UserField",
+      "enabled": true,
+      "comment": "Entries without \"regex\" only override a built-in's enabled / priority / hash settings, e.g. set enabled to false to turn it off"
+    }
+  ]
+}
